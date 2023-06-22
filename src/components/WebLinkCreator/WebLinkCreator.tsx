@@ -54,7 +54,7 @@ export const WebLinkCreator = () => {
     setLongLinkConversion(value);
   };
 
-  // debounce
+  // debounced search
   useEffect(() => {
     setNotFound(false);
     if (timerId) {
@@ -79,7 +79,7 @@ export const WebLinkCreator = () => {
     }
   }, [searchField]);
 
-  // debounce
+  // debounced Conversion long -> short
   useEffect(() => {
     if (timerId) {
       clearTimeout(timerId);
@@ -88,7 +88,7 @@ export const WebLinkCreator = () => {
       const newTimer: any = setTimeout(() => {
         webLinksApi
           .convertLink({ longLink: longLinkConversion })
-          .then(() => console.log("ok"))
+          .then((res: any) => setShortLinkConversion(res.data.shortLink))
           .catch((e) => {
             console.log(e);
             toast.error("Что-то пошло не так!");
@@ -98,7 +98,7 @@ export const WebLinkCreator = () => {
     }
   }, [longLinkConversion]);
 
-  // debounce
+  // debounced Conversion short -> long
   useEffect(() => {
     if (timerId) {
       clearTimeout(timerId);
@@ -107,7 +107,7 @@ export const WebLinkCreator = () => {
       const newTimer: any = setTimeout(() => {
         webLinksApi
           .convertLink({ shortLink: shortLinkConversion })
-          .then(() => console.log("ok"))
+          .then((res: any) => setLongLinkConversion(res.data.longLink))
           .catch((e) => {
             console.log(e);
             toast.error("Что-то пошло не так!");
@@ -142,6 +142,7 @@ export const WebLinkCreator = () => {
           onChange={(event) => {
             onChangeShortLinkHandler(event.currentTarget.value);
           }}
+          onFocus={() => setLongLinkConversion("")}
           value={shortLinkConversion}
           placeholder="short version"
         />
@@ -149,6 +150,7 @@ export const WebLinkCreator = () => {
           onChange={(event) => {
             onChangeLongLinkHandler(event.currentTarget.value);
           }}
+          onFocus={() => setShortLinkConversion("")}
           value={longLinkConversion}
           placeholder="long version"
         />
