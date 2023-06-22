@@ -1,25 +1,49 @@
 import React, { useEffect, useState } from "react";
-import { Button, TextField, Typography } from "@it-incubator/ui-kit";
+import {
+  Button,
+  Card,
+  Snackbar,
+  TextField,
+  Typography,
+} from "@it-incubator/ui-kit";
 import styles from "../WebLinkCreator/WebLinkCreator.module.css";
 import webLinksApi from "../../services/webLinksService";
+import { toast } from "react-toastify";
+
+export type linkType = {
+  id: string;
+  longLink: string;
+  shortLink: string;
+  description: string;
+};
 
 export const WebLinkCreator = () => {
   const [newLink, setNewLink] = useState("");
+  const [searchField, setSearchField] = useState("");
   const [newLinkDescription, setNewLinkDescription] = useState("");
   const [shortLinkConversion, setShortLinkConversion] = useState("");
   const [longLinkConversion, setLongLinkConversion] = useState("");
   const [timerId, setTimerId] = useState<number | undefined>(undefined);
+  const [foundedLinks, setFoundedLinks] = useState<linkType[] | []>([]);
+  const [notFound, setNotFound] = useState(false);
 
   const onClickCreateLinkHandler = () => {
     webLinksApi
       .createLink({ longLink: newLink, description: newLinkDescription })
-      .then((r) => {
+      .then(() => {
         setNewLink("");
         setNewLinkDescription("");
+        toast.success("Ссылка успешно создана!");
       })
       .catch((e: any) => {
         console.log(e.message);
+        toast.error("Возникла ошибка при создании ссылки!");
       });
+  };
+
+  const onChangeSearchFieldHandler = (value: string) => {
+    setSearchField(value);
+    setFoundedLinks([]);
   };
 
   const onChangeShortLinkHandler = (value: string) => {
@@ -32,16 +56,46 @@ export const WebLinkCreator = () => {
 
   // debounce
   useEffect(() => {
+    setNotFound(false);
     if (timerId) {
       clearTimeout(timerId);
     }
-    const newTimer: any = setTimeout(() => {
-      webLinksApi
-        .convertLink({ longLink: longLinkConversion })
-        .then(() => console.log("ok"))
-        .catch((e) => console.log(e));
-    }, 1500);
-    setTimerId(newTimer);
+    if (searchField) {
+      const newTimer: any = setTimeout(() => {
+        webLinksApi
+          .searchLink(searchField)
+          .then((res: any) => {
+            if (!res.data.length) {
+              setNotFound(true);
+            } else {
+              setFoundedLinks(res.data);
+            }
+          })
+          .catch((e) => {
+            console.log(e);
+          });
+      }, 1500);
+      setTimerId(newTimer);
+    }
+  }, [searchField]);
+
+  // debounce
+  useEffect(() => {
+    if (timerId) {
+      clearTimeout(timerId);
+    }
+    if (longLinkConversion) {
+      const newTimer: any = setTimeout(() => {
+        webLinksApi
+          .convertLink({ longLink: longLinkConversion })
+          .then(() => console.log("ok"))
+          .catch((e) => {
+            console.log(e);
+            toast.error("Что-то пошло не так!");
+          });
+      }, 1500);
+      setTimerId(newTimer);
+    }
   }, [longLinkConversion]);
 
   // debounce
@@ -49,20 +103,24 @@ export const WebLinkCreator = () => {
     if (timerId) {
       clearTimeout(timerId);
     }
-    const newTimer: any = setTimeout(() => {
-      webLinksApi
-        .convertLink({ shortLink: shortLinkConversion })
-        .then(() => console.log("ok"))
-        .catch((e) => console.log(e));
-    }, 1500);
-    setTimerId(newTimer);
+    if (shortLinkConversion) {
+      const newTimer: any = setTimeout(() => {
+        webLinksApi
+          .convertLink({ shortLink: shortLinkConversion })
+          .then(() => console.log("ok"))
+          .catch((e) => {
+            console.log(e);
+            toast.error("Что-то пошло не так!");
+          });
+      }, 1500);
+      setTimerId(newTimer);
+    }
   }, [shortLinkConversion]);
 
   return (
     <div className={styles.wrapper}>
-      <Typography.H1 ml={10} mt={20}>
-        Создать ссылку
-      </Typography.H1>
+      <Snackbar />
+      <Typography.H1 mt={20}>Создать ссылку</Typography.H1>
       <div className={styles.block}>
         <TextField
           onChange={(event) => setNewLink(event.currentTarget.value)}
@@ -78,9 +136,7 @@ export const WebLinkCreator = () => {
           создать ссылку
         </Button>
       </div>
-      <Typography.H1 ml={10} mt={20}>
-        Конвертация ссылки
-      </Typography.H1>
+      <Typography.H1 mt={20}>Конвертация ссылки</Typography.H1>
       <div className={styles.block}>
         <TextField
           onChange={(event) => {
@@ -96,6 +152,24 @@ export const WebLinkCreator = () => {
           value={longLinkConversion}
           placeholder="long version"
         />
+      </div>
+      <Typography.H1 mt={20}>Поиск ссылок</Typography.H1>
+      <div className={styles.block}>
+        <TextField
+          onChange={(event) =>
+            onChangeSearchFieldHandler(event.currentTarget.value)
+          }
+          value={searchField}
+          placeholder="search"
+        />
+        {notFound && <Typography.H3 mt={20}>Ничего не нашлось</Typography.H3>}
+        {!!foundedLinks.length && (
+          <div>
+            {foundedLinks.map((link, i) => {
+              return <Card key={i}>{link.longLink}</Card>;
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
